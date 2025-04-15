@@ -251,14 +251,14 @@ start_node_wrapper(Name, Instant) ->
     fun(Fixtures0) ->
         {setup,
             fun() ->
-                    {ok, Node} = slave:start_link(Host, Name),
+                    {ok, Pid, Node} = peer:start_link(#{host => Host, name => Name}),
                     true = rpc:call(Node, code, set_path, [code:get_path()]),
                     {module, _} = rpc:call(Node, code, load_file, [?MODULE]),
-                    [{Name, Node}|Fixtures0]
+                    [{Name, {Pid, Node}}|Fixtures0]
             end,
             fun(Fixtures1) ->
-                    Node = proplists:get_value(Name, Fixtures1),
-                    ok = slave:stop(Node)
+                    {Pid, _} = proplists:get_value(Name, Fixtures1),
+                    ok = peer:stop(Pid)
             end,
             Instant}
     end.
@@ -266,7 +266,7 @@ start_node_wrapper(Name, Instant) ->
 -spec spawn_on_node_wrapper(atom(), eu_instant()) -> eu_instant().
 spawn_on_node_wrapper(Name, Instant) ->
     fun(Fixtures) ->
-        Node = proplists:get_value(Name, Fixtures),
+        {_, Node} = proplists:get_value(Name, Fixtures),
         {spawn, Node, Instant(Fixtures)}
     end.
 
